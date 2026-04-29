@@ -2,15 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, GitFork, Settings, BarChart3, FileText } from 'lucide-react'
+import { Home, Settings } from 'lucide-react'
 import { SignOutButton } from '@/components/auth/sign-out-button'
 import { useSession } from 'next-auth/react'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/analysis', label: 'Analysis', icon: BarChart3 },
-  { href: '/reports', label: 'Reports', icon: FileText },
-  { href: '/repos', label: 'Repositories', icon: GitFork },
 ]
 
 const quickActions = [
