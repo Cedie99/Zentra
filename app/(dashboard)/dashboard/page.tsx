@@ -78,7 +78,7 @@ export default async function DashboardPage() {
                   <span className="w-1 h-5 bg-amber-500 rounded-full" />
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Your Repositories</h2>
                 </div>
-                {repositories.map((repo) => {
+                {repositories.map((repo: typeof repositories[number]) => {
                   const latestReport = repo.reports[0]
                   return (
                     <Link
@@ -162,8 +162,8 @@ export default async function DashboardPage() {
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Overview</h3>
               <OverviewChart
                 total={repositories.length}
-                analyzed={repositories.filter(r => r.reports.length > 0).length}
-                pending={repositories.filter(r => r.reports.length === 0).length}
+                analyzed={repositories.filter((r: typeof repositories[number]) => r.reports.length > 0).length}
+                pending={repositories.filter((r: typeof repositories[number]) => r.reports.length === 0).length}
               />
             </div>
 
@@ -195,12 +195,12 @@ export default async function DashboardPage() {
             {/* Recent Activity */}
             <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300 shadow-sm">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Recent Activity</h3>
-              {repositories.filter(r => r.reports.length > 0).length === 0 ? (
+              {repositories.filter((r: typeof repositories[number]) => r.reports.length > 0).length === 0 ? (
                 <p className="text-sm text-muted-foreground">No recent activity</p>
               ) : (
                 <div className="space-y-3">
                   {repositories
-                    .filter(r => r.reports.length > 0)
+                    .filter((r: typeof repositories[number]) => r.reports.length > 0)
                     .sort((a, b) => new Date(b.reports[0].createdAt).getTime() - new Date(a.reports[0].createdAt).getTime())
                     .slice(0, 3)
                     .map((repo) => (
