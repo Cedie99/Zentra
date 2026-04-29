@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String           @id @default(cuid())
+  githubId     String?          @unique
+  githubToken  String?
+  name         String?
+  email        String?          @unique
+  password     String?
+  image        String?
+  accounts     Account[]
+  sessions     Session[]
+  repositories Repository[]
+  reports      AnalysisReport[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Repository {
+  id          String           @id @default(cuid())
+  userId      String?
+  githubId    Int              @unique
+  fullName    String
+  name        String
+  description String?
+  language    String?
+  isPrivate   Boolean          @default(false)
+  url         String
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reports     AnalysisReport[]
+
+  @@index([userId])
+}
+
+model AnalysisReport {
+  id            String          @id @default(cuid())
+  userId        String?
+  repositoryId  String
+  status        AnalysisStatus  @default(PENDING)
+  healthScore   Int?
+  techStack     Json?
+  criticalCount Int             @default(0)
+  warningCount  Int             @default(0)
+  infoCount     Int             @default(0)
+  filesAnalyzed Int             @default(0)
+  createdAt     DateTime        @default(now())
+  completedAt   DateTime?
+  user          User?           @relation(fields: [userId], references: [id])
+  repository    Repository      @relation(fields: [repositoryId], references: [id])
+  sections      ReportSection[]
+
+  @@index([userId])
+}
+
+model ReportSection {
+  id         String          @id @default(cuid())
+  reportId   String
+  category   SectionCategory
+  title      String
+  severity   Severity
+  issueCount Int             @default(0)
+  order      Int
+  report     AnalysisReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  issues     ReportIssue[]
+
+  @@index([reportId])
+}
+
+model ReportIssue {
+  id          String   @id @default(cuid())
+  sectionId   String
+  title       String
+  description String
+  severity    Severity
+  filePath    String?
+  lineNumber  Int?
+  evidence    String?
+  suggestion  String
+  codeExample String?
+  section     ReportSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+}
+
+enum AnalysisStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SectionCategory {
+  CACHING
+  DATABASE
+  SECURITY
+  ERROR_HANDLING
+  SCALABILITY
+  ARCHITECTURE
+  DEPLOYMENT
+}
+
+enum Severity {
+  CRITICAL
+  WARNING
+  INFO
+}
