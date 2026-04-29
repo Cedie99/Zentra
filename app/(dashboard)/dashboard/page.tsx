@@ -2,15 +2,28 @@ import { Sidebar } from '@/components/dashboard/sidebar'
 import { OverviewChart } from '@/components/dashboard/overview-chart'
 import { RepoForm } from '@/components/repos/repo-form'
 import { prisma } from '@/lib/db/client'
-import { Prisma } from '.prisma/client'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { GitFork, XCircle, AlertTriangle, Info, Clock, FileCode, ArrowRight, MoreVertical, Zap } from 'lucide-react'
 
-type RepoWithReports = Prisma.RepositoryGetPayload<{
-  include: { reports: true }
-}>
+type RepoWithReports = {
+  id: string
+  fullName: string
+  name: string
+  description: string | null
+  language: string | null
+  isPrivate: boolean
+  url: string
+  reports: {
+    id: string
+    healthScore: number | null
+    criticalCount: number
+    warningCount: number
+    infoCount: number
+    createdAt: Date
+  }[]
+}
 
 function ScoreBadge({ score }: { score: number | null }) {
   if (score === null) return <span className="text-muted-foreground text-sm">—</span>
