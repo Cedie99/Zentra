@@ -43,6 +43,7 @@ export default async function DashboardPage() {
 
   const repositories = await prisma.repository.findMany({
     where: { userId: session.user.id },
+    orderBy: { id: 'desc' },
     take: 50,
     include: {
       reports: {

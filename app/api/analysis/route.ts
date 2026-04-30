@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ reportId: report.id })
+    return NextResponse.json({ reportId: report.id, repositoryId: repoRecord.id })
   } catch (err) {
     console.error('Analysis failed:', err)
     await prisma.analysisReport.update({

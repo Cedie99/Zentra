@@ -39,7 +39,7 @@ export function RepoForm() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Analysis failed')
-      router.push(`/analysis/${data.reportId}`)
+      router.push(`/reports/${data.repositoryId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoading(false)
