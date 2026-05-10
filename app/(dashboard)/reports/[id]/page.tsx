@@ -1,13 +1,17 @@
 'use client'
 
 import { Sidebar } from '@/components/dashboard/sidebar'
-import { SectionCard } from '@/components/report/section-card'
 import { IssueDetailPanel } from '@/components/report/issue-detail-panel'
-import { GitFork, ArrowLeft, AlertTriangle, Info, CheckCircle2 } from 'lucide-react'
+import { CategoryGrid } from '@/components/report/category-grid'
+import { IssueList } from '@/components/report/issue-list'
+import { ProductionReadinessHero } from '@/components/report/production-readiness-hero'
+import { ReportStats } from '@/components/report/report-stats'
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useMemo, useEffect, use } from 'react'
+import { useState, useEffect, use } from 'react'
+import { RerunAnalysisButton } from '@/components/report/rerun-analysis-button'
 
-interface Issue {
+export interface Issue {
   id: string
   title: string
   description: string
@@ -17,10 +21,11 @@ interface Issue {
   evidence?: string | null
   suggestion: string
   codeExample?: string | null
+  isAiAdded?: boolean
   sectionId?: string
 }
 
-interface Section {
+export interface Section {
   id: string
   title: string
   category: string
@@ -29,20 +34,44 @@ interface Section {
   issues: Issue[]
 }
 
-interface Report {
+export interface Report {
   id: string
   repository: {
     fullName: string
+    description?: string | null
+    language?: string | null
+    url?: string | null
   }
   healthScore: number | null
   criticalCount: number
   warningCount: number
   infoCount: number
+  filesAnalyzed: number
   status: string
   createdAt: string
+  completedAt?: string | null
+  aiSummary?: string | null
+  productionReadiness?: {
+    verdict: 'READY' | 'NEEDS_WORK' | 'NOT_READY'
+    confidence: number
+    summary: string
+    strengths: string[]
+    risks: string[]
+    recommendation: string
+  } | null
   techStack: Record<string, string[]>
   sections: Section[]
 }
+
+const CATEGORIES = [
+  'SECURITY',
+  'DATABASE',
+  'CACHING',
+  'ERROR_HANDLING',
+  'SCALABILITY',
+  'ARCHITECTURE',
+  'DEPLOYMENT',
+]
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -50,6 +79,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const [selectedCategory, setSelectedCategory] = useState<string>('SECURITY')
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [loading, setLoading] = useState(true)
+  const [findingsOpen, setFindingsOpen] = useState(false)
 
   useEffect(() => {
     async function fetchReport() {
@@ -58,6 +88,10 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         if (res.ok) {
           const data = await res.json()
           setReport(data)
+          const firstWithIssues = CATEGORIES.find((cat) =>
+            data.sections.some((s: Section) => s.category === cat && s.issueCount > 0)
+          )
+          if (firstWithIssues) setSelectedCategory(firstWithIssues)
         }
       } catch (error) {
         console.error('Failed to fetch report:', error)
@@ -68,40 +102,16 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     fetchReport()
   }, [id])
 
-  const categories = ['SECURITY', 'DATABASE', 'CACHING', 'ERROR_HANDLING', 'SCALABILITY', 'ARCHITECTURE', 'DEPLOYMENT']
-  const filteredSections = report?.sections.filter(s => s.category === selectedCategory) || []
-
-  // Flatten all issues for navigation
-  const allIssues = useMemo(() => {
-    if (!report) return []
-    return report.sections.flatMap(section => 
-      section.issues.map(issue => ({ ...issue, sectionId: section.id }))
-    )
-  }, [report])
-
-  const currentIndex = useMemo(() => {
-    if (!selectedIssue) return -1
-    return allIssues.findIndex(issue => issue.id === selectedIssue.id)
-  }, [selectedIssue, allIssues])
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setSelectedIssue(allIssues[currentIndex - 1])
-    }
-  }
-
-  const handleNext = () => {
-    if (currentIndex < allIssues.length - 1) {
-      setSelectedIssue(allIssues[currentIndex + 1])
-    }
-  }
 
   if (loading) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
+        <main className="flex-1 ml-64 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">Loading report…</p>
+          </div>
         </main>
       </div>
     )
@@ -111,10 +121,10 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
+        <main className="flex-1 ml-64 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-muted-foreground">Report not found</p>
-            <Link href="/dashboard" className="text-amber-400 hover:text-amber-300 mt-4 inline-block">
+            <p className="text-muted-foreground mb-4">Report not found</p>
+            <Link href="/dashboard" className="text-amber-400 hover:text-amber-300 text-sm">
               Return to Dashboard
             </Link>
           </div>
@@ -123,132 +133,101 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     )
   }
 
+  const selectedSections = report.sections.filter((s) => s.category === selectedCategory)
+  const totalIssues = report.criticalCount + report.warningCount + report.infoCount
+
   return (
-    <div className="flex min-h-screen bg-background relative overflow-hidden">
-
-      
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 p-8 ml-64 relative z-10 overflow-x-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="w-10 h-10 bg-primary/5 border border-border rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors">
-              <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                {report.repository.fullName}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">Analysis report</p>
+      <main className="flex-1 ml-64 min-w-0">
+        <div className="px-8 py-8 space-y-6">
+
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <Link
+                href="/dashboard"
+                className="w-9 h-9 bg-secondary border border-border rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-amber-500/30 transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-foreground tracking-tight truncate">
+                  {report.repository.fullName}
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Analyzed {new Date(report.createdAt).toLocaleDateString('en-US', {
+                    month: 'long', day: 'numeric', year: 'numeric',
+                  })}
+                  {report.filesAnalyzed ? ` · ${report.filesAnalyzed} files scanned` : ''}
+                </p>
+              </div>
             </div>
+            <RerunAnalysisButton repoFullName={report.repository.fullName} />
           </div>
-        </div>
 
-        {report.sections.length === 0 ? (
-          <div className="text-center py-32">
-            <div className="w-20 h-20 bg-gradient-to-b from-amber-500/10 to-transparent border border-amber-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <GitFork className="w-10 h-10 text-amber-500/60" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-2xl font-semibold text-foreground mb-2">No analysis available</h3>
-            <p className="text-muted-foreground">This repository hasn't been analyzed yet</p>
-          </div>
-        ) : (
-          <>
-            {/* Report Summary */}
-            <div className="bg-card border border-border rounded-2xl p-6 mb-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-1 h-5 bg-amber-500 rounded-full" />
-                <h2 className="text-lg font-semibold text-foreground">Analysis Summary</h2>
-              </div>
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-400" strokeWidth={1.5} />
-                  <span className="text-foreground">{report.criticalCount} Critical</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-yellow-400" strokeWidth={1.5} />
-                  <span className="text-foreground">{report.warningCount} Warnings</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
-                  <span className="text-foreground">{report.infoCount} Info</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-400" strokeWidth={1.5} />
-                  <span className="text-foreground">Health Score: {report.healthScore || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
+          {/* === MAIN RESULT: Production Readiness === */}
+          <ProductionReadinessHero
+            productionReadiness={report.productionReadiness ?? null}
+            aiSummary={report.aiSummary ?? null}
+            healthScore={report.healthScore}
+          />
 
-            {/* Category Tabs */}
-            <div className="bg-card border border-border rounded-2xl p-6 mb-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-1 h-5 bg-amber-500 rounded-full" />
-                <h2 className="text-lg font-semibold text-foreground">Categories</h2>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      selectedCategory === category
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-lg shadow-amber-500/10'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Supporting stats row */}
+          <ReportStats
+            criticalCount={report.criticalCount}
+            warningCount={report.warningCount}
+            infoCount={report.infoCount}
+            filesAnalyzed={report.filesAnalyzed}
+            techStack={report.techStack}
+          />
 
-            {/* Tabbed Sections */}
-            <div className="space-y-3 w-full">
-              {filteredSections.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No sections found for this category</p>
-                </div>
-              ) : (
-                filteredSections.map((section) => (
-                  <SectionCard
-                    key={section.id}
-                    id={section.id}
-                    category={section.category}
-                    title={section.title}
-                    severity={section.severity as 'CRITICAL' | 'WARNING' | 'INFO'}
-                    issueCount={section.issueCount}
-                    issues={section.issues.map((i) => ({
-                      id: i.id,
-                      title: i.title,
-                      description: i.description,
-                      severity: i.severity as 'CRITICAL' | 'WARNING' | 'INFO',
-                      filePath: i.filePath,
-                      lineNumber: i.lineNumber,
-                      evidence: i.evidence,
-                      suggestion: i.suggestion,
-                      codeExample: i.codeExample,
-                    }))}
-                    onIssueClick={(issue) => setSelectedIssue(issue)}
-                  />
-                ))
-              )}
-            </div>
+          {/* Detailed findings — collapsible */}
+          <div className="border border-border rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setFindingsOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/40 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-foreground">Detailed Findings</span>
+                {totalIssues > 0 && (
+                  <span className="text-xs text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-lg">
+                    {totalIssues} issues across {CATEGORIES.length} categories
+                  </span>
+                )}
+              </div>
+              {findingsOpen
+                ? <ChevronUp className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                : <ChevronDown className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+              }
+            </button>
 
-            {/* Issue Detail Panel */}
-            {selectedIssue && (
-              <IssueDetailPanel
-                issue={selectedIssue}
-                onClose={() => setSelectedIssue(null)}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                hasPrevious={currentIndex > 0}
-                hasNext={currentIndex < allIssues.length - 1}
-              />
+            {findingsOpen && (
+              <div className="border-t border-border px-5 pb-5 pt-4 space-y-4">
+                <CategoryGrid
+                  sections={report.sections}
+                  categories={CATEGORIES}
+                  selectedCategory={selectedCategory}
+                  onSelect={setSelectedCategory}
+                />
+                <IssueList
+                  sections={selectedSections}
+                  category={selectedCategory}
+                  onIssueClick={setSelectedIssue}
+                />
+              </div>
             )}
-          </>
-        )}
+          </div>
+
+        </div>
       </main>
+
+      {selectedIssue && (
+        <IssueDetailPanel
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+        />
+      )}
     </div>
   )
 }

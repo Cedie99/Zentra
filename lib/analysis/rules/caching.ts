@@ -6,38 +6,66 @@ export const cachingRules: AnalysisRule[] = [
     id: 'CACHE_001',
     category: 'CACHING',
     title: 'No cache layer detected',
-    description: 'No caching library found in dependencies.',
+    description: 'Your application has no caching library installed. Every request hits your database directly, which becomes slow and expensive as traffic grows. Caching stores frequently-accessed data in memory so you don\'t query the database repeatedly for the same data.',
     severity: 'WARNING',
-    suggestion: 'Add Redis (ioredis), node-cache, or a similar caching layer to reduce database load.',
+    suggestion: 'Add a caching layer. Node.js: ioredis, node-cache, lru-cache. Python: redis-py, cachetools, django-redis, Flask-Caching. This can reduce database load by 50-90%.',
     codeExample: `import Redis from 'ioredis'\nconst redis = new Redis(process.env.REDIS_URL)\n\n// Cache result for 60 seconds\nawait redis.set('key', JSON.stringify(data), 'EX', 60)`,
     detect(files: FetchedFile[]): RuleMatch[] {
       const packageJson = files.find((f) => f.path === 'package.json' || f.path.endsWith('/package.json'))
-      if (!packageJson) return []
+      const requirementsTxt = files.find((f) => /requirements.*\.txt$/.test(f.path) || f.path === 'requirements.txt')
 
-      let deps: Record<string, string> = {}
-      try {
-        const parsed = JSON.parse(packageJson.content)
-        deps = { ...parsed.dependencies, ...parsed.devDependencies }
-      } catch {
-        return []
+      // Check Node.js project
+      if (packageJson) {
+        let deps: Record<string, string> = {}
+        try {
+          const parsed = JSON.parse(packageJson.content)
+          deps = { ...parsed.dependencies, ...parsed.devDependencies }
+        } catch {
+          // ignore
+        }
+
+        const cacheLibs = ['redis', 'ioredis', 'node-cache', 'memcached', 'lru-cache', 'cache-manager', 'keyv']
+        if (cacheLibs.some((lib) => lib in deps)) return []
+
+        return [
+          {
+            ruleId: 'CACHE_001',
+            title: 'No cache layer detected',
+            description: 'No caching library (redis, ioredis, node-cache, etc.) found in package.json.',
+            severity: 'WARNING',
+            filePath: packageJson.path,
+            evidence: 'No cache dependency found',
+            suggestion: 'Add Redis (ioredis) or node-cache to reduce database load and improve response times.',
+            category: 'CACHING',
+          },
+        ]
       }
 
-      const cacheLibs = ['redis', 'ioredis', 'node-cache', 'memcached', 'lru-cache', 'cache-manager', 'keyv']
-      const hasCache = cacheLibs.some((lib) => lib in deps)
-      if (hasCache) return []
+      // Check Python project
+      if (requirementsTxt) {
+        const content = requirementsTxt.content.toLowerCase()
+        const pythonCacheLibs = ['redis', 'django-redis', 'flask-caching', 'cachetools', 'dogpile.cache', 'beaker', 'diskcache', 'pymemcache']
+        if (pythonCacheLibs.some((lib) => content.includes(lib))) return []
 
-      return [
-        {
-          ruleId: 'CACHE_001',
-          title: 'No cache layer detected',
-          description: 'No caching library (redis, ioredis, node-cache, etc.) found in package.json.',
-          severity: 'WARNING',
-          filePath: packageJson.path,
-          evidence: 'No cache dependency found',
-          suggestion: 'Add Redis (ioredis) or node-cache to reduce database load and improve response times.',
-          category: 'CACHING',
-        },
-      ]
+        // Only flag if there are Python source files that do DB calls
+        const hasDbCalls = files.some((f) => /\.py$/.test(f.path) && /session\.query|Model\.objects|cursor\.execute/.test(f.content))
+        if (!hasDbCalls) return []
+
+        return [
+          {
+            ruleId: 'CACHE_001',
+            title: 'No cache layer detected',
+            description: 'No caching library (redis, cachetools, django-redis, etc.) found in requirements.txt.',
+            severity: 'WARNING',
+            filePath: requirementsTxt.path,
+            evidence: 'No cache dependency found',
+            suggestion: 'Add redis-py or cachetools to reduce database load and improve response times.',
+            category: 'CACHING',
+          },
+        ]
+      }
+
+      return []
     },
   },
 
@@ -45,18 +73,30 @@ export const cachingRules: AnalysisRule[] = [
     id: 'CACHE_002',
     category: 'CACHING',
     title: 'DB queries in routes without cache check',
-    description: 'Route files query the database without checking a cache first.',
+    description: 'Your route handlers query the database directly without first checking if the data is cached. This means every request hits the database even for data that rarely changes. This wastes database resources and slows down responses.',
     severity: 'WARNING',
-    suggestion: 'Wrap frequent read queries with a cache check using Redis or an in-memory store.',
+    suggestion: 'Implement cache-aside pattern: 1) Check cache first, 2) If cache miss, query database, 3) Store result in cache with expiration. Works for all languages with a Redis client.',
     detect(files: FetchedFile[]): RuleMatch[] {
       const matches: RuleMatch[] = []
-      const routeFiles = files.filter((f) => /\/(routes|api|controllers)\//.test(f.path) && !/\.(test|spec)\./.test(f.path))
+      const routeFiles = files.filter((f) =>
+        /\/(routes|api|controllers|views|routers)\//.test(f.path) &&
+        /\.(ts|js|py)$/.test(f.path) &&
+        !/\.(test|spec)\./.test(f.path)
+      )
 
       for (const file of routeFiles) {
-        const hasDbCall = /prisma\.|\.find\(|\.findMany|db\.query|\.findOne/.test(file.content)
-        const hasCacheCheck = /redis\.get|cache\.get|\.get\(|cacheManager/.test(file.content)
+        const isPy = /\.py$/.test(file.path)
+        const hasDbCall = isPy
+          ? /session\.query|\.objects\.(filter|get|all)\(|cursor\.execute/.test(file.content)
+          : /prisma\.|\.find\(|\.findMany|db\.query|\.findOne/.test(file.content)
+        const hasCacheCheck = isPy
+          ? /redis\.get|cache\.get|r\.get\(|flask_caching|cache\.cached/.test(file.content)
+          : /redis\.get|cache\.get|\.get\(|cacheManager/.test(file.content)
+
         if (hasDbCall && !hasCacheCheck) {
-          const lineIdx = file.lines.findIndex((l) => /prisma\.|\.find\(|\.findMany/.test(l))
+          const lineIdx = isPy
+            ? file.lines.findIndex((l) => /session\.query|\.objects\.|cursor\.execute/.test(l))
+            : file.lines.findIndex((l) => /prisma\.|\.find\(|\.findMany/.test(l))
           matches.push({
             ruleId: 'CACHE_002',
             title: 'DB queries in routes without cache check',
@@ -65,7 +105,9 @@ export const cachingRules: AnalysisRule[] = [
             filePath: file.path,
             lineNumber: lineIdx >= 0 ? lineIdx + 1 : undefined,
             evidence: lineIdx >= 0 ? file.lines[lineIdx].trim().slice(0, 200) : 'DB query detected',
-            suggestion: 'Cache frequently-read data with Redis using a cache-aside pattern.',
+            suggestion: isPy
+              ? 'Check Redis cache before querying: cached = redis_client.get(key); if not cached: result = db_query(); redis_client.setex(key, 300, result)'
+              : 'Cache frequently-read data with Redis using a cache-aside pattern.',
             category: 'CACHING',
           })
           if (matches.length >= 5) break
@@ -79,20 +121,26 @@ export const cachingRules: AnalysisRule[] = [
     id: 'CACHE_003',
     category: 'CACHING',
     title: 'No HTTP cache headers on GET routes',
-    description: 'Express GET route handlers respond without Cache-Control headers.',
+    description: 'Your GET endpoints don\'t set Cache-Control headers. This means browsers and CDNs can\'t cache your responses, so every page load makes a full server request. Adding cache headers allows browsers to store responses locally and CDNs to serve content from edge locations near users.',
     severity: 'INFO',
-    suggestion: 'Add Cache-Control headers to GET responses: res.set("Cache-Control", "public, max-age=300")',
+    suggestion: 'Add Cache-Control headers to GET routes. Node.js: res.set("Cache-Control", "public, max-age=300"). Python/Flask: response.headers["Cache-Control"] = "public, max-age=300". FastAPI: use Response headers.',
     detect(files: FetchedFile[]): RuleMatch[] {
       const matches: RuleMatch[] = []
       const routeFiles = files.filter((f) =>
-        /\.(ts|js)$/.test(f.path) &&
-        /\/(routes|api|controllers)\//.test(f.path) &&
+        /\.(ts|js|py)$/.test(f.path) &&
+        /\/(routes|api|controllers|views|routers)\//.test(f.path) &&
         !/\.(test|spec)\./.test(f.path)
       )
 
       for (const file of routeFiles) {
-        const hasGetRoute = /router\.(get|app\.get)\(|res\.json\(/.test(file.content)
-        const hasCacheHeader = /Cache-Control|cache-control|res\.set\(/.test(file.content)
+        const isPy = /\.py$/.test(file.path)
+        const hasGetRoute = isPy
+          ? /@(app|router|bp|blueprint)\.(get|route)\(/.test(file.content)
+          : /router\.(get|app\.get)\(|res\.json\(/.test(file.content)
+        const hasCacheHeader = /Cache-Control|cache-control|max.age/.test(file.content) ||
+          (!isPy && /res\.set\(/.test(file.content)) ||
+          (isPy && /make_response|after_request/.test(file.content))
+
         if (hasGetRoute && !hasCacheHeader) {
           matches.push({
             ruleId: 'CACHE_003',
@@ -100,8 +148,10 @@ export const cachingRules: AnalysisRule[] = [
             description: 'GET route responds without Cache-Control headers, missing browser/CDN caching.',
             severity: 'INFO',
             filePath: file.path,
-            evidence: 'res.json() used without Cache-Control header',
-            suggestion: 'Add: res.set("Cache-Control", "public, max-age=300") before res.json()',
+            evidence: 'GET route without Cache-Control header',
+            suggestion: isPy
+              ? 'Add response.headers["Cache-Control"] = "public, max-age=300" to GET responses.'
+              : 'Add: res.set("Cache-Control", "public, max-age=300") before res.json()',
             category: 'CACHING',
           })
           if (matches.length >= 3) break
@@ -115,9 +165,9 @@ export const cachingRules: AnalysisRule[] = [
     id: 'CACHE_004',
     category: 'CACHING',
     title: 'No CDN or static asset caching config',
-    description: 'No CDN cache headers configured in next.config or server config.',
+    description: 'Your Next.js config doesn\'t define cache headers for static assets (CSS, JS, images). Without proper caching, users re-download these files on every visit, wasting bandwidth and slowing page loads.',
     severity: 'INFO',
-    suggestion: 'Configure cache headers in next.config.js headers() or use a CDN like Cloudflare.',
+    suggestion: 'Add a headers() function in next.config.js to set long cache times for static assets: headers: async () => [{ source: "/_next/static/(.*)", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }]',
     detect(files: FetchedFile[]): RuleMatch[] {
       const nextConfig = files.find((f) => /next\.config\.(js|ts|mjs)$/.test(f.path))
       if (!nextConfig) return []

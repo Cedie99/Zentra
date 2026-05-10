@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Plan {
+  FREE
+  PRO
+}
+
 model User {
   id           String           @id @default(cuid())
   githubId     String?          @unique
@@ -14,6 +19,7 @@ model User {
   email        String?          @unique
   password     String?
   image        String?
+  plan         Plan             @default(FREE)
   accounts     Account[]
   sessions     Session[]
   repositories Repository[]
@@ -81,6 +87,8 @@ model AnalysisReport {
   warningCount  Int             @default(0)
   infoCount     Int             @default(0)
   filesAnalyzed Int             @default(0)
+  aiSummary             String?
+  productionReadiness   Json?
   createdAt     DateTime        @default(now())
   completedAt   DateTime?
   user          User?           @relation(fields: [userId], references: [id])
@@ -115,6 +123,7 @@ model ReportIssue {
   evidence    String?
   suggestion  String
   codeExample String?
+  isAiAdded   Boolean  @default(false)
   section     ReportSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
   @@index([sectionId])

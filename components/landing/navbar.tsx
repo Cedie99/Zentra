@@ -16,17 +16,20 @@ export async function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+            <Link href="/#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               How it Works
             </Link>
-            <Link href="#analysis" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+            <Link href="/#analysis" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Analysis
             </Link>
-            <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+            <Link href="/#features" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Features
             </Link>
-            <Link href="#use-cases" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+            <Link href="/#use-cases" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Use Cases
+            </Link>
+            <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+              Pricing
             </Link>
           </div>
 

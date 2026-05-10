@@ -8,7 +8,7 @@ export interface FetchedFile {
 }
 
 const MAX_FILE_SIZE = 100 * 1024 // 100KB
-const MAX_FILES = 50
+const MAX_FILES = 150
 
 const SKIP_PATTERNS = [
   /package-lock\.json$/,

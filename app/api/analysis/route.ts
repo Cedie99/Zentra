@@ -1,16 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db/client'
 import { createServerOctokit } from '@/lib/github/client'
 import { fetchRepositoryFiles } from '@/lib/github/file-fetcher'
 import { runAnalysis } from '@/lib/analysis/engine'
 import { detectTechStack } from '@/lib/analysis/tech-detector'
 import { calculateScore } from '@/lib/analysis/score-calculator'
+import { enhanceAnalysisWithAI, applyAIEnhancements } from '@/lib/analysis/ai-enhancer'
 import { auth } from '@/auth'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const userId = session.user.id
+
+  // Enforce monthly analysis limit for free users
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
+  if (user?.plan === 'FREE') {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthlyCount = await prisma.analysisReport.count({
+      where: { userId, createdAt: { gte: startOfMonth } },
+    })
+    if (monthlyCount >= 3) {
+      return NextResponse.json({ error: 'LIMIT_REACHED', limit: 3 }, { status: 402 })
+    }
   }
 
   const body = await req.json()
@@ -40,7 +57,7 @@ export async function POST(req: NextRequest) {
   }
 
   const report = await prisma.analysisReport.create({
-    data: { repositoryId: repoRecord.id, status: 'PENDING' },
+    data: { repositoryId: repoRecord.id, userId, status: 'PENDING' },
   })
 
   try {
@@ -48,7 +65,12 @@ export async function POST(req: NextRequest) {
 
     const files = await fetchRepositoryFiles(octokit, owner, repo)
     const techStack = detectTechStack(files)
-    const sections = runAnalysis(files)
+    const rawSections = runAnalysis(files)
+
+    // AI enhancement: remove false positives, improve suggestions, find missed issues
+    const aiEnhancement = await enhanceAnalysisWithAI(files, rawSections)
+    const sections = applyAIEnhancements(rawSections, aiEnhancement)
+
     const score = calculateScore(sections)
 
     // Create all sections first
@@ -82,8 +104,30 @@ export async function POST(req: NextRequest) {
           evidence: issue.evidence,
           suggestion: issue.suggestion,
           codeExample: issue.codeExample,
+          isAiAdded: false,
         })
       })
+
+      // Inject AI-discovered issues into the matching section
+      if (aiEnhancement) {
+        const aiIssues = aiEnhancement.additionalIssues.filter(
+          (ai) => ai.category === section.category
+        )
+        for (const ai of aiIssues) {
+          allIssues.push({
+            sectionId,
+            title: ai.title,
+            description: ai.description,
+            severity: ai.severity,
+            filePath: ai.filePath,
+            lineNumber: null,
+            evidence: null,
+            suggestion: ai.suggestion,
+            codeExample: null,
+            isAiAdded: true,
+          })
+        }
+      }
     })
 
     // Bulk insert all issues at once
@@ -103,6 +147,8 @@ export async function POST(req: NextRequest) {
         warningCount: score.warningCount,
         infoCount: score.infoCount,
         filesAnalyzed: files.length,
+        aiSummary: aiEnhancement?.repoSummary ?? null,
+        productionReadiness: (aiEnhancement?.productionReadiness as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
         completedAt: new Date(),
       },
     })
