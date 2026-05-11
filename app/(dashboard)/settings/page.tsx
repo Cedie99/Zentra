@@ -2,7 +2,7 @@ import { Sidebar } from '@/components/dashboard/sidebar'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db/client'
-import { User, Mail, Key, GitFork, Bell, Shield, Globe, Link as LinkIcon } from 'lucide-react'
+import { Key, GitFork, Bell, Shield, Globe, CreditCard } from 'lucide-react'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -16,6 +16,7 @@ export default async function SettingsPage() {
       image: true,
       githubId: true,
       githubToken: true,
+      plan: true,
     },
   })
 
@@ -133,6 +134,44 @@ export default async function SettingsPage() {
                 </div>
                 <div className="text-xs text-muted-foreground">English</div>
               </div>
+            </div>
+          </div>
+
+          {/* Subscription */}
+          <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-amber-500 rounded-full" />
+              Subscription
+            </h2>
+            <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl border border-border">
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-5 h-5 text-foreground" strokeWidth={1.5} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {user.plan === 'PRO' ? 'Pro Plan' : 'Free Plan'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user.plan === 'PRO' ? 'Unlimited analyses' : '3 analyses per month'}
+                  </p>
+                </div>
+              </div>
+              {user.plan === 'PRO' ? (
+                <a
+                  href="https://app.lemonsqueezy.com/my-orders"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                >
+                  Manage Subscription
+                </a>
+              ) : (
+                <a
+                  href="/pricing"
+                  className="text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                >
+                  Upgrade to Pro
+                </a>
+              )}
             </div>
           </div>
 
