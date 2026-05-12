@@ -97,7 +97,7 @@ export default function PricingPage() {
           <div className="bg-card border-2 border-amber-500/60 rounded-2xl p-8 flex flex-col relative shadow-xl shadow-amber-500/10">
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
               <span className="px-4 py-1 bg-amber-500 text-black text-xs font-bold rounded-full tracking-wide">
-                MOST POPULAR
+                COMING SOON
               </span>
             </div>
             <div className="mb-6">
