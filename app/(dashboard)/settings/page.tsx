@@ -2,7 +2,7 @@ import { Sidebar } from '@/components/dashboard/sidebar'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db/client'
-import { Key, GitFork, Bell, Shield, Globe, CreditCard } from 'lucide-react'
+import { Key, GitFork, Bell, Shield, Globe, CreditCard, Users } from 'lucide-react'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -174,6 +174,31 @@ export default async function SettingsPage() {
               )}
             </div>
           </div>
+
+          {/* Team Workspace — Pro only */}
+          {user.plan === 'PRO' && (
+            <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300">
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <span className="w-1 h-5 bg-amber-500 rounded-full" />
+                Team Workspace
+              </h2>
+              <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-foreground" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Invite Teammates</p>
+                    <p className="text-xs text-muted-foreground">Share your repos and reports with your team</p>
+                  </div>
+                </div>
+                <a
+                  href="/settings/team"
+                  className="text-xs text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                >
+                  Manage Team →
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Security */}
           <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300">

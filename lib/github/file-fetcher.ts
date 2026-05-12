@@ -8,7 +8,7 @@ export interface FetchedFile {
 }
 
 const MAX_FILE_SIZE = 100 * 1024 // 100KB
-const MAX_FILES = 150
+const FILE_LIMITS = { FREE: 150, PRO: 250 }
 
 const SKIP_PATTERNS = [
   /package-lock\.json$/,
@@ -64,7 +64,8 @@ interface TreeItem {
 export async function fetchRepositoryFiles(
   octokit: Octokit,
   owner: string,
-  repo: string
+  repo: string,
+  plan: 'FREE' | 'PRO' = 'FREE'
 ): Promise<FetchedFile[]> {
   // Get default branch
   const { data: repoData } = await octokit.rest.repos.get({ owner, repo })
@@ -90,7 +91,7 @@ export async function fetchRepositoryFiles(
   const sorted = allFiles
     .map((f) => ({ ...f, score: getPriorityScore(f.path!) }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_FILES)
+    .slice(0, FILE_LIMITS[plan])
 
   // Fetch file contents in batches of 50
   const fetched: FetchedFile[] = []

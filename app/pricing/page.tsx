@@ -5,6 +5,7 @@ import { Check, Zap, HelpCircle } from 'lucide-react'
 
 const FREE_FEATURES = [
   '3 analyses per calendar month',
+  '150 files analyzed per repository',
   'All 7 analysis categories',
   'AI production verdict',
   'Health score (0–100)',
@@ -14,11 +15,16 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
   'Unlimited analyses',
+  '250 files analyzed per repository',
   'All 7 analysis categories',
   'AI production verdict',
   'Health score (0–100)',
   'Evidence-based issues with file + line',
   'Tech stack detection',
+  'Export reports as PDF',
+  'Export reports as Markdown',
+  'Team workspace — invite teammates',
+  'Shared repo & report access',
 ]
 
 const FAQ = [

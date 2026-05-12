@@ -35,7 +35,7 @@ export function RepoForm() {
       .then((data: UsageData | null) => {
         if (data) {
           setUsage(data)
-          if (data.plan === 'FREE' && data.limit !== null && data.used >= data.limit) {
+          if (data.limit !== null && data.used >= data.limit) {
             setLimitReached(true)
           }
         }
@@ -77,7 +77,7 @@ export function RepoForm() {
   return (
     <div className="space-y-4">
       {/* Usage indicator */}
-      {usage && usage.plan === 'FREE' && usage.limit !== null && (
+      {usage && usage.limit !== null && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex-1 bg-secondary rounded-full h-1.5 overflow-hidden">
             <div
@@ -98,11 +98,17 @@ export function RepoForm() {
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-300">Monthly limit reached</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              You&apos;ve used all 3 free analyses this month.{' '}
-              <Link href="/pricing" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
-                Upgrade to Pro
-              </Link>{' '}
-              for unlimited analyses.
+              {usage?.plan === 'FREE' ? (
+                <>
+                  You&apos;ve used all {usage.limit} free analyses this month.{' '}
+                  <Link href="/pricing" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
+                    Upgrade to Pro
+                  </Link>{' '}
+                  to get more.
+                </>
+              ) : (
+                <>Your workspace has used all {usage?.limit} shared analyses this month.</>
+              )}
             </p>
           </div>
           <Link

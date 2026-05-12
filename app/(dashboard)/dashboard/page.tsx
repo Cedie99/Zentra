@@ -5,8 +5,9 @@ import { prisma } from '@/lib/db/client'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { GitFork, XCircle, AlertTriangle, Info, Clock, FileCode, ArrowRight, Zap, ShieldCheck, TrendingUp } from 'lucide-react'
+import { GitFork, XCircle, AlertTriangle, Info, Clock, FileCode, ArrowRight, Zap, ShieldCheck, TrendingUp, Users } from 'lucide-react'
 import { DeleteRepoButton } from '@/components/repos/delete-repo-button'
+import { getMembership } from '@/lib/team/get-membership'
 
 type RepoWithReports = {
   id: string
@@ -38,21 +39,33 @@ function ScoreBadge({ score }: { score: number | null }) {
   )
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
-  const userRecord = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })
+  const { joined } = await searchParams
+  const { workspaceUserId, role } = await getMembership(session.user.id)
+  const isMember = role !== 'OWNER'
+  const isViewer = role === 'VIEWER'
+  const [userRecord, teamMemberCount] = await Promise.all([
+    prisma.user.findUnique({ where: { id: workspaceUserId }, select: { plan: true, name: true, email: true } }),
+    prisma.teamMember.count({ where: { ownerId: workspaceUserId } }),
+  ])
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthlyUsed = await prisma.analysisReport.count({
-    where: { userId: session.user.id, createdAt: { gte: startOfMonth } },
+    where: { userId: workspaceUserId, createdAt: { gte: startOfMonth } },
   })
   const plan = userRecord?.plan ?? 'FREE'
-  const monthlyLimit = plan === 'PRO' ? null : 3
+  // Solo PRO users (no members) get unlimited — pool cap only applies when team members exist
+  const monthlyLimit: number | null = plan === 'PRO' ? (teamMemberCount > 0 ? 20 : null) : 3
 
   const repositories = await prisma.repository.findMany({
-    where: { userId: session.user.id },
+    where: { userId: workspaceUserId },
     orderBy: { id: 'desc' },
     take: 50,
     include: {
@@ -69,6 +82,32 @@ export default async function DashboardPage() {
       
       <Sidebar />
       <main className="ml-64 p-8 relative z-10">
+        {/* Joined workspace success banner */}
+        {joined === 'true' && (
+          <div className="mb-6 flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-5 py-3">
+            <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-green-400 text-sm font-bold">✓</span>
+            </div>
+            <p className="text-sm text-green-400 font-medium">
+              You&apos;ve joined the workspace — you can now view and add repositories shared with your team.
+            </p>
+          </div>
+        )}
+
+        {/* Shared workspace context bar */}
+        {isMember && (
+          <div className="mb-6 flex items-center gap-3 bg-amber-500/5 border border-amber-500/20 rounded-xl px-5 py-3">
+            <Users className="w-4 h-4 text-amber-500/70 flex-shrink-0" strokeWidth={1.5} />
+            <p className="text-sm text-muted-foreground">
+              You&apos;re viewing the shared workspace of{' '}
+              <span className="text-foreground font-medium">
+                {userRecord?.name ?? userRecord?.email ?? 'your team owner'}
+              </span>
+              . Repositories you add here will be visible to everyone in the workspace.
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -92,20 +131,33 @@ export default async function DashboardPage() {
               <span className="text-amber-400 font-medium">· Upgrade</span>
             </Link>
           )}
+          {plan === 'PRO' && monthlyLimit !== null && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary border border-border rounded-full text-xs text-muted-foreground">
+              <TrendingUp className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />
+              <span>
+                <span className={monthlyUsed >= monthlyLimit ? 'text-red-400 font-semibold' : 'text-foreground font-medium'}>
+                  {monthlyUsed} / {monthlyLimit}
+                </span>
+                {' '}workspace analyses this month
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Add Repository Form */}
-            <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300 shadow-lg">
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <span className="w-1 h-5 bg-amber-500 rounded-full" />
-                Connect a Repository
-              </h2>
-              <RepoForm />
-            </div>
+            {/* Add Repository Form — editors and owners only */}
+            {!isViewer && (
+              <div className="bg-card border border-border rounded-2xl p-6 hover:border-amber-500/20 transition-colors duration-300 shadow-lg">
+                <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <span className="w-1 h-5 bg-amber-500 rounded-full" />
+                  Connect a Repository
+                </h2>
+                <RepoForm />
+              </div>
+            )}
 
             {/* Repositories List */}
             {repositories.length === 0 ? (
@@ -133,8 +185,8 @@ export default async function DashboardPage() {
                   const latestReport = repo.reports[0]
                   return (
                     <div key={repo.id} className="group relative bg-card border border-border hover:border-amber-500/30 rounded-2xl p-5 transition-colors duration-200">
-                      {/* Delete button — top-right, appears on hover */}
-                      <DeleteRepoButton repoId={repo.id} />
+                      {/* Delete button — owners and editors only */}
+                      {!isViewer && <DeleteRepoButton repoId={repo.id} />}
 
                       <Link href={`/reports/${repo.id}`} className="block">
                         <div className="flex items-start gap-4">

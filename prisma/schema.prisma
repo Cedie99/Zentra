@@ -26,6 +26,9 @@ model User {
   sessions     Session[]
   repositories Repository[]
   reports      AnalysisReport[]
+  ownedInvites TeamInvite[]     @relation("OwnedInvites")
+  ownedMembers TeamMember[]     @relation("OwnedMembers")
+  memberOf     TeamMember[]     @relation("MemberOf")
 }
 
 model Account {
@@ -152,4 +155,46 @@ enum Severity {
   CRITICAL
   WARNING
   INFO
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+model TeamInvite {
+  id         String       @id @default(cuid())
+  ownerId    String
+  token      String       @unique
+  status     InviteStatus @default(PENDING)
+  expiresAt  DateTime
+  createdAt  DateTime     @default(now())
+  acceptedAt DateTime?
+  owner      User         @relation("OwnedInvites", fields: [ownerId], references: [id], onDelete: Cascade)
+  membership TeamMember?
+
+  @@index([ownerId])
+  @@index([token])
+}
+
+enum MemberRole {
+  EDITOR
+  VIEWER
+}
+
+model TeamMember {
+  id       String     @id @default(cuid())
+  ownerId  String
+  memberId String
+  inviteId String     @unique
+  role     MemberRole @default(EDITOR)
+  joinedAt DateTime   @default(now())
+  owner    User       @relation("OwnedMembers", fields: [ownerId], references: [id], onDelete: Cascade)
+  member   User       @relation("MemberOf", fields: [memberId], references: [id], onDelete: Cascade)
+  invite   TeamInvite @relation(fields: [inviteId], references: [id])
+
+  @@unique([ownerId, memberId])
+  @@index([ownerId])
+  @@index([memberId])
 }

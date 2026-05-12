@@ -10,6 +10,7 @@ import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect, use } from 'react'
 import { RerunAnalysisButton } from '@/components/report/rerun-analysis-button'
+import { ExportButtons } from '@/components/report/export-buttons'
 
 export interface Issue {
   id: string
@@ -76,22 +77,30 @@ const CATEGORIES = [
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [report, setReport] = useState<Report | null>(null)
+  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO'>('FREE')
   const [selectedCategory, setSelectedCategory] = useState<string>('SECURITY')
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [loading, setLoading] = useState(true)
   const [findingsOpen, setFindingsOpen] = useState(false)
 
   useEffect(() => {
-    async function fetchReport() {
+    async function fetchData() {
       try {
-        const res = await fetch(`/api/reports/${id}`)
-        if (res.ok) {
-          const data = await res.json()
+        const [reportRes, planRes] = await Promise.all([
+          fetch(`/api/reports/${id}`),
+          fetch('/api/user/plan'),
+        ])
+        if (reportRes.ok) {
+          const data = await reportRes.json()
           setReport(data)
           const firstWithIssues = CATEGORIES.find((cat) =>
             data.sections.some((s: Section) => s.category === cat && s.issueCount > 0)
           )
           if (firstWithIssues) setSelectedCategory(firstWithIssues)
+        }
+        if (planRes.ok) {
+          const planData = await planRes.json()
+          setUserPlan(planData.plan ?? 'FREE')
         }
       } catch (error) {
         console.error('Failed to fetch report:', error)
@@ -99,7 +108,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         setLoading(false)
       }
     }
-    fetchReport()
+    fetchData()
   }, [id])
 
 
@@ -163,7 +172,10 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                 </p>
               </div>
             </div>
-            <RerunAnalysisButton repoFullName={report.repository.fullName} />
+            <div className="flex items-center gap-2">
+              <ExportButtons report={report} userPlan={userPlan} />
+              <RerunAnalysisButton repoFullName={report.repository.fullName} />
+            </div>
           </div>
 
           {/* === MAIN RESULT: Production Readiness === */}

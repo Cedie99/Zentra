@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Settings } from 'lucide-react'
+import { Home, Settings, Users } from 'lucide-react'
 import { SignOutButton } from '@/components/auth/sign-out-button'
 import { useSession } from 'next-auth/react'
 
@@ -18,6 +18,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user
+  const isPro = user?.plan === 'PRO'
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() ?? 'U'
@@ -72,6 +73,19 @@ export function Sidebar() {
               </Link>
             )
           })}
+          {isPro && (
+            <Link
+              href="/settings/team"
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                pathname === '/settings/team'
+                  ? 'bg-primary/10 text-foreground border border-border'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Team
+            </Link>
+          )}
         </div>
       </div>
 

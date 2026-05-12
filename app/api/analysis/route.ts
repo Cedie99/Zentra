@@ -8,6 +8,7 @@ import { detectTechStack } from '@/lib/analysis/tech-detector'
 import { calculateScore } from '@/lib/analysis/score-calculator'
 import { enhanceAnalysisWithAI, applyAIEnhancements } from '@/lib/analysis/ai-enhancer'
 import { auth } from '@/auth'
+import { getMembership } from '@/lib/team/get-membership'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -15,18 +16,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const userId = session.user.id
+  const { role, workspaceUserId } = await getMembership(session.user.id)
 
-  // Enforce monthly analysis limit for free users
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
-  if (user?.plan === 'FREE') {
+  if (role === 'VIEWER') {
+    return NextResponse.json({ error: 'Viewers cannot run analyses. Ask the workspace owner to grant you Editor access.' }, { status: 403 })
+  }
+
+  // Enforce monthly analysis limit based on the workspace owner's plan
+  // FREE: 3/month | PRO solo (no members): unlimited | PRO with members: 20/month shared pool
+  const [user, memberCount] = await Promise.all([
+    prisma.user.findUnique({ where: { id: workspaceUserId }, select: { plan: true } }),
+    prisma.teamMember.count({ where: { ownerId: workspaceUserId } }),
+  ])
+  const isProSolo = user?.plan === 'PRO' && memberCount === 0
+  if (!isProSolo) {
+    const monthlyLimit = user?.plan === 'PRO' ? 20 : 3
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const monthlyCount = await prisma.analysisReport.count({
-      where: { userId, createdAt: { gte: startOfMonth } },
+      where: { userId: workspaceUserId, createdAt: { gte: startOfMonth } },
     })
-    if (monthlyCount >= 3) {
-      return NextResponse.json({ error: 'LIMIT_REACHED', limit: 3 }, { status: 402 })
+    if (monthlyCount >= monthlyLimit) {
+      return NextResponse.json({ error: 'LIMIT_REACHED', limit: monthlyLimit }, { status: 402 })
     }
   }
 
@@ -49,21 +60,21 @@ export async function POST(req: NextRequest) {
     const { data: ghRepo } = await octokit.rest.repos.get({ owner, repo })
     repoRecord = await prisma.repository.upsert({
       where: { githubId: ghRepo.id },
-      update: { fullName: ghRepo.full_name, name: ghRepo.name, description: ghRepo.description, language: ghRepo.language, isPrivate: ghRepo.private, url: ghRepo.html_url, userId: session.user.id },
-      create: { githubId: ghRepo.id, fullName: ghRepo.full_name, name: ghRepo.name, description: ghRepo.description, language: ghRepo.language, isPrivate: ghRepo.private, url: ghRepo.html_url, userId: session.user.id },
+      update: { fullName: ghRepo.full_name, name: ghRepo.name, description: ghRepo.description, language: ghRepo.language, isPrivate: ghRepo.private, url: ghRepo.html_url, userId: workspaceUserId },
+      create: { githubId: ghRepo.id, fullName: ghRepo.full_name, name: ghRepo.name, description: ghRepo.description, language: ghRepo.language, isPrivate: ghRepo.private, url: ghRepo.html_url, userId: workspaceUserId },
     })
   } catch {
     return NextResponse.json({ error: 'Repository not found or not accessible' }, { status: 404 })
   }
 
   const report = await prisma.analysisReport.create({
-    data: { repositoryId: repoRecord.id, userId, status: 'PENDING' },
+    data: { repositoryId: repoRecord.id, userId: workspaceUserId, status: 'PENDING' },
   })
 
   try {
     await prisma.analysisReport.update({ where: { id: report.id }, data: { status: 'RUNNING' } })
 
-    const files = await fetchRepositoryFiles(octokit, owner, repo)
+    const files = await fetchRepositoryFiles(octokit, owner, repo, user?.plan ?? 'FREE')
     const techStack = detectTechStack(files)
     const rawSections = runAnalysis(files)
 

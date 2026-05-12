@@ -1,28 +1,33 @@
 'use client'
 
 import { Check, Zap } from 'lucide-react'
+import { SubscribeButton } from '@/components/pricing/subscribe-button'
 
 const FREE_FEATURES = [
-  '3 analyses per month',
+  '3 analyses per calendar month',
+  '150 files analyzed per repository',
   'All 7 analysis categories',
   'AI production verdict',
   'Health score (0–100)',
-  'Evidence-based issues',
+  'Evidence-based issues with file + line',
+  'Tech stack detection',
 ]
 
 const PRO_FEATURES = [
   'Unlimited analyses',
+  '250 files analyzed per repository',
   'All 7 analysis categories',
   'AI production verdict',
   'Health score (0–100)',
-  'Evidence-based issues',
+  'Evidence-based issues with file + line',
+  'Tech stack detection',
+  'Export reports as PDF',
+  'Export reports as Markdown',
+  'Team workspace — invite teammates',
+  'Shared repo & report access',
 ]
 
 export function Pricing() {
-  function handleSubscribe() {
-    // Placeholder — payment not yet implemented
-    alert('Pro subscriptions are coming soon!')
-  }
 
   return (
     <section id="pricing" className="py-32 px-4 bg-background relative overflow-hidden">
@@ -95,12 +100,7 @@ export function Pricing() {
               ))}
             </ul>
 
-            <button
-              onClick={handleSubscribe}
-              className="block w-full text-center px-6 py-3 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20"
-            >
-              Subscribe — Coming Soon
-            </button>
+            <SubscribeButton />
           </div>
         </div>
       </div>

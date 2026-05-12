@@ -28,7 +28,7 @@ export async function Navbar() {
             <Link href="/#use-cases" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Use Cases
             </Link>
-            <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+            <Link href="/#pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Pricing
             </Link>
           </div>
