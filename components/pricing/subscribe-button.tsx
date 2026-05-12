@@ -22,11 +22,10 @@ export function SubscribeButton() {
 
   return (
     <button
-      onClick={handleSubscribe}
-      disabled={loading}
-      className="w-full text-center px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-black font-semibold rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20"
+      disabled
+      className="w-full text-center px-6 py-3 bg-muted text-muted-foreground font-semibold rounded-xl cursor-not-allowed opacity-70"
     >
-      {loading ? 'Redirecting...' : 'Subscribe — $4/month'}
+      Coming Soon
     </button>
   )
 }
