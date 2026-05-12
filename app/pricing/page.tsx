@@ -103,7 +103,7 @@ export default function PricingPage() {
             <div className="mb-6">
               <h2 className="text-xl font-bold text-foreground mb-1">Pro</h2>
               <div className="flex items-end gap-1 mt-4">
-                <span className="text-5xl font-bold text-foreground">$9</span>
+                <span className="text-5xl font-bold text-foreground">$4</span>
                 <span className="text-muted-foreground mb-1.5">/month</span>
               </div>
             </div>

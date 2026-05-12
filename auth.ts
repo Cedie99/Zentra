@@ -93,7 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id    = token.id as string
       session.user.plan  = (token.plan as string) ?? 'FREE'
       session.user.name  = token.name as string | null
-      session.user.email = token.email as string | null
+      session.user.email = (token.email as string | null) ?? ''
       session.user.image = token.picture as string | null
       return session
     },

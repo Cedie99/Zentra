@@ -26,7 +26,7 @@ export function SubscribeButton() {
       disabled={loading}
       className="w-full text-center px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-black font-semibold rounded-xl transition-all duration-200 shadow-md shadow-amber-500/20"
     >
-      {loading ? 'Redirecting...' : 'Subscribe — $9/month'}
+      {loading ? 'Redirecting...' : 'Subscribe — $4/month'}
     </button>
   )
 }

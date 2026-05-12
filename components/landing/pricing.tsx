@@ -86,7 +86,7 @@ export function Pricing() {
             <div className="mb-6">
               <h3 className="text-xl font-bold text-foreground mb-1">Pro</h3>
               <div className="flex items-end gap-1 mt-4">
-                <span className="text-4xl font-bold text-foreground">$9</span>
+                <span className="text-4xl font-bold text-foreground">$4</span>
                 <span className="text-muted-foreground mb-1">/month</span>
               </div>
             </div>
