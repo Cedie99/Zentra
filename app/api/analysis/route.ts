@@ -79,7 +79,9 @@ export async function POST(req: NextRequest) {
     const rawSections = runAnalysis(files)
 
     // AI enhancement: remove false positives, improve suggestions, find missed issues
-    const aiEnhancement = await enhanceAnalysisWithAI(files, rawSections)
+    const { detectRepoContext } = await import('@/lib/analysis/repo-context')
+    const repoContext = detectRepoContext(files)
+    const aiEnhancement = await enhanceAnalysisWithAI(files, rawSections, techStack, repoContext)
     const sections = applyAIEnhancements(rawSections, aiEnhancement)
 
     const score = calculateScore(sections)

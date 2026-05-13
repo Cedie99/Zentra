@@ -6,6 +6,9 @@ import { errorHandlingRules } from './rules/error-handling'
 import { scalabilityRules } from './rules/scalability'
 import { architectureRules } from './rules/architecture'
 import { deploymentRules } from './rules/deployment'
+import { detectRepoContext, type RepoContext } from './repo-context'
+
+export type { RepoContext }
 
 export type { FetchedFile }
 
@@ -39,7 +42,7 @@ export interface AnalysisRule {
   severity: 'CRITICAL' | 'WARNING' | 'INFO'
   suggestion: string
   codeExample?: string
-  detect(files: FetchedFile[]): RuleMatch[]
+  detect(files: FetchedFile[], context?: RepoContext): RuleMatch[]
 }
 
 export interface AnalysisSection {
@@ -77,6 +80,8 @@ function getSectionSeverity(issues: RuleMatch[]): 'CRITICAL' | 'WARNING' | 'INFO
 }
 
 export function runAnalysis(files: FetchedFile[]): AnalysisSection[] {
+  const context = detectRepoContext(files)
+
   const allRules: AnalysisRule[] = [
     ...cachingRules,
     ...databaseRules,
@@ -100,7 +105,7 @@ export function runAnalysis(files: FetchedFile[]): AnalysisSection[] {
   // Run rules in parallel for better performance
   const ruleResults = allRules.map((rule) => {
     try {
-      const matches = rule.detect(files)
+      const matches = rule.detect(files, context)
       return { category: rule.category, matches }
     } catch {
       return { category: rule.category, matches: [] }

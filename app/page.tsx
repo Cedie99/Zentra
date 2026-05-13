@@ -72,7 +72,7 @@ export default function RootPage() {
           <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
             {[
               { icon: Sparkles, label: 'Claude AI analysis' },
-              { icon: ShieldCheck, label: '7 categories scanned' },
+              { icon: ShieldCheck, label: '78 rules · 7 categories' },
               { icon: Zap, label: 'Up to 150 files' },
               { icon: CheckCircle2, label: 'Production verdict' },
             ].map(({ icon: Icon, label }) => (

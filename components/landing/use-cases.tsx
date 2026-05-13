@@ -116,7 +116,7 @@ export function UseCases() {
         <div className="mt-16 bg-card border border-border rounded-2xl p-8 md:p-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '34', label: 'Automated rules' },
+              { value: '78', label: 'Automated rules' },
               { value: '7', label: 'Analysis categories' },
               { value: '150', label: 'Files scanned' },
               { value: 'AI', label: 'Powered by Claude' },

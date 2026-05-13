@@ -40,18 +40,76 @@ const CATEGORY_LABELS: Record<string, string> = {
   DEPLOYMENT: 'Deployment',
 }
 
+const CATEGORY_SUCCESS_INFO: Record<string, { checkedItems: string[]; tip: string }> = {
+  SECURITY: {
+    checkedItems: ['Authentication & authorization', 'Input validation & sanitization', 'Dependency vulnerabilities', 'Secrets & credential exposure', 'CORS & header policies'],
+    tip: 'Keep dependencies up to date and run periodic security audits to maintain this status.',
+  },
+  DATABASE: {
+    checkedItems: ['Query performance & N+1 patterns', 'Connection pooling & management', 'Migration safety', 'Index usage & optimization', 'Data validation & constraints'],
+    tip: 'Monitor query performance in production to catch slow queries early.',
+  },
+  CACHING: {
+    checkedItems: ['Cache invalidation strategies', 'TTL & eviction policies', 'Cache key design', 'Memory usage & limits', 'Distributed cache consistency'],
+    tip: 'Regularly review cache hit rates to ensure your caching strategy remains effective.',
+  },
+  ERROR_HANDLING: {
+    checkedItems: ['Try-catch coverage', 'Error propagation patterns', 'User-facing error messages', 'Logging & monitoring hooks', 'Graceful degradation'],
+    tip: 'Set up error tracking and alerting to catch issues before users report them.',
+  },
+  SCALABILITY: {
+    checkedItems: ['Horizontal scaling readiness', 'Stateless service design', 'Resource bottlenecks', 'Async processing patterns', 'Load handling capacity'],
+    tip: 'Perform load testing periodically to validate your scalability assumptions.',
+  },
+  ARCHITECTURE: {
+    checkedItems: ['Code organization & modularity', 'Separation of concerns', 'Dependency management', 'Design pattern usage', 'API contract consistency'],
+    tip: 'Document architectural decisions (ADRs) to preserve context for your team.',
+  },
+  DEPLOYMENT: {
+    checkedItems: ['CI/CD pipeline configuration', 'Environment variable management', 'Health checks & readiness probes', 'Rollback strategies', 'Build optimization'],
+    tip: 'Automate deployments and use feature flags to reduce release risk.',
+  },
+}
+
 export function IssueList({ sections, category, onIssueClick }: IssueListProps) {
   const categoryLabel = CATEGORY_LABELS[category] ?? category
   const totalIssues = sections.reduce((sum, s) => sum + s.issues.length, 0)
 
   if (sections.length === 0 || totalIssues === 0) {
+    const successInfo = CATEGORY_SUCCESS_INFO[category]
     return (
-      <div className="bg-card border border-border rounded-2xl p-12 text-center">
-        <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="w-6 h-6 text-green-400" strokeWidth={1.5} />
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-6 h-6 text-green-400" strokeWidth={1.5} />
+          </div>
+          <p className="text-base font-semibold text-foreground mb-1">No issues found</p>
+          <p className="text-sm text-muted-foreground">{categoryLabel} looks clean</p>
         </div>
-        <p className="text-base font-semibold text-foreground mb-1">No issues found</p>
-        <p className="text-sm text-muted-foreground">{categoryLabel} looks clean</p>
+
+        {successInfo && (
+          <div className="space-y-4">
+            <div className="bg-green-500/5 border border-green-500/10 rounded-xl p-4">
+              <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-3">What was checked</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {successInfo.checkedItems.map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <CheckCircle className="w-3 h-3 text-green-400/70 flex-shrink-0" strokeWidth={2} />
+                    <span className="text-xs text-muted-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 bg-secondary/50 border border-border rounded-xl p-4">
+              <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-0.5">Pro tip</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{successInfo.tip}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }

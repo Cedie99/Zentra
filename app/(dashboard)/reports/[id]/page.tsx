@@ -6,7 +6,7 @@ import { CategoryGrid } from '@/components/report/category-grid'
 import { IssueList } from '@/components/report/issue-list'
 import { ProductionReadinessHero } from '@/components/report/production-readiness-hero'
 import { ReportStats } from '@/components/report/report-stats'
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, GitCompare } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect, use } from 'react'
 import { RerunAnalysisButton } from '@/components/report/rerun-analysis-button'
@@ -81,7 +81,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const [selectedCategory, setSelectedCategory] = useState<string>('SECURITY')
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [loading, setLoading] = useState(true)
-  const [findingsOpen, setFindingsOpen] = useState(false)
+  const [findingsOpen, setFindingsOpen] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
@@ -174,6 +174,13 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             </div>
             <div className="flex items-center gap-2">
               <ExportButtons report={report} userPlan={userPlan} />
+              <Link
+                href={`/compare/${id}`}
+                className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-xl text-sm text-muted-foreground hover:text-foreground hover:border-amber-500/30 transition-colors"
+              >
+                <GitCompare className="w-4 h-4" strokeWidth={1.5} />
+                Compare
+              </Link>
               <RerunAnalysisButton repoFullName={report.repository.fullName} />
             </div>
           </div>

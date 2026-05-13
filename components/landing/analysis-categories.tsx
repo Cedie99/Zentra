@@ -10,57 +10,57 @@ export async function AnalysisCategories() {
     {
       icon: Layers,
       title: 'Architecture',
-      count: 4,
-      description: 'Detect god files, business logic in routes, mixed async styles, and logging issues.',
-      items: ['God file detection', 'Service layer analysis', 'Async consistency', 'Structured logging'],
+      count: 12,
+      description: 'Detect god files, circular dependencies, business logic in routes, TypeScript strict mode, and more.',
+      items: ['God file detection', 'Circular dependency analysis', 'Service layer separation', 'TypeScript strict mode', 'Deep nesting detection', 'Hardcoded config values'],
       color: 'blue',
     },
     {
       icon: Shield,
       title: 'Security',
-      count: 5,
-      description: 'Find hardcoded secrets, open CORS, missing auth, exposed errors, and .env files.',
-      items: ['Secret detection', 'CORS configuration', 'Auth middleware', 'Error exposure', '.env files'],
+      count: 12,
+      description: 'Find hardcoded secrets, open CORS, missing auth, CSRF protection, weak password hashing, and more.',
+      items: ['Secret detection', 'CORS configuration', 'Auth middleware', 'Rate limiting', 'JWT expiration', 'Input validation', 'CSRF protection'],
       color: 'red',
     },
     {
       icon: Database,
       title: 'Database',
-      count: 5,
-      description: 'Analyze query patterns, indexing, pagination, and SQL injection risks.',
-      items: ['N+1 query detection', 'Missing pagination', 'Index analysis', 'Field selection', 'SQL injection'],
+      count: 11,
+      description: 'Analyze query patterns, indexing, pagination, SQL injection, connection pooling, and transactions.',
+      items: ['N+1 query detection', 'Missing pagination', 'Index analysis', 'SQL injection', 'Connection pooling', 'Transaction safety'],
       color: 'purple',
     },
     {
       icon: Zap,
       title: 'Caching',
-      count: 4,
-      description: 'Detect missing cache layers, uncached DB queries in routes, and absent HTTP cache headers.',
-      items: ['Cache layer detection', 'Route query caching', 'HTTP cache headers', 'CDN config'],
+      count: 10,
+      description: 'Detect missing cache layers, uncached DB queries, absent HTTP cache headers, and cache TTL issues.',
+      items: ['Cache layer detection', 'Route query caching', 'HTTP cache headers', 'Cache TTL validation', 'Duplicate query detection', 'ETag support'],
       color: 'yellow',
     },
     {
       icon: AlertTriangle,
       title: 'Error Handling',
-      count: 4,
-      description: 'Review async error handling, swallowed exceptions, global handlers, and API timeouts.',
-      items: ['Async without try-catch', 'Swallowed errors', 'Global error handler', 'API call timeouts'],
+      count: 10,
+      description: 'Review async error handling, swallowed exceptions, global handlers, retry logic, and graceful shutdown.',
+      items: ['Async error handling', 'Swallowed errors', 'Global error handler', 'API call timeouts', 'Retry logic', 'Graceful shutdown'],
       color: 'orange',
     },
     {
       icon: Server,
       title: 'Deployment',
-      count: 7,
-      description: 'Check Dockerfile, CI/CD, health checks, env validation, and hardcoded localhost.',
-      items: ['Dockerfile', '.env.example', 'Health check endpoint', 'CI/CD config', 'Env var validation', 'Localhost in source', 'Dev deps in prod'],
+      count: 12,
+      description: 'Check Dockerfile, CI/CD, health checks, env validation, hardcoded localhost, and more.',
+      items: ['Dockerfile', '.env.example', 'Health check endpoint', 'CI/CD config', 'Env var validation', 'Hardcoded localhost', 'Dev deps in prod'],
       color: 'green',
     },
     {
       icon: Cpu,
       title: 'Scalability',
-      count: 5,
-      description: 'Assess code scalability, resource management, and load handling capabilities.',
-      items: ['Load balancing', 'Resource limits', 'Async patterns', 'Queue systems'],
+      count: 11,
+      description: 'Assess session stores, rate limiter storage, file uploads, blocking I/O, and global state.',
+      items: ['Session store analysis', 'Rate limiter storage', 'File upload storage', 'Distributed locks', 'Blocking I/O detection', 'Global state detection'],
       color: 'cyan',
     },
   ]
@@ -97,13 +97,13 @@ export async function AnalysisCategories() {
         <div className="text-center mb-20">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium mb-6">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            34 Analysis Rules
+            78 Analysis Rules
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 tracking-tight">
             What We <span className="text-amber-500">Analyze</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
-            Comprehensive code analysis across 7 critical categories with 34+ automated rules
+            Comprehensive code analysis across 7 critical categories with 78 automated rules
           </p>
         </div>
 

@@ -40,7 +40,7 @@ export function Features() {
     },
     {
       icon: SlidersHorizontal,
-      title: '34 Automated Rules',
+      title: '78 Automated Rules',
       description: 'Pattern-based rules cover security, database, caching, error handling, scalability, architecture, and deployment — all running in parallel.',
       color: 'cyan',
     },

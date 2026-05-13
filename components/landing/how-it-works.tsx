@@ -10,7 +10,7 @@ export function HowItWorks() {
     {
       icon: Sparkles,
       title: 'AI Scans Your Code',
-      description: 'We fetch up to 150 of your most important files and run 34+ automated rules across 7 categories. Claude AI then filters false positives, finds issues the rules missed, and writes codebase-specific suggestions.',
+      description: 'We fetch up to 150 of your most important files and run 78 automated rules across 7 categories. Claude AI then filters false positives, finds issues the rules missed, and writes codebase-specific suggestions.',
     },
     {
       icon: BarChart3,

@@ -247,4 +247,303 @@ const users = await prisma.user.findMany({ include: { posts: true } })`,
       return matches
     },
   },
+
+  {
+    id: 'DB_006',
+    category: 'DATABASE',
+    title: 'No database connection pooling',
+    description: 'Your database client creates a new connection for every query instead of reusing connections from a pool. Creating connections is expensive (TCP handshake + auth). Under load, you\'ll exhaust available connections and your app will crash.',
+    severity: 'WARNING',
+    suggestion: 'Use connection pooling. Prisma handles this automatically. For raw pg: new Pool({ max: 20 }). SQLAlchemy: create_engine(url, pool_size=20). Django: set CONN_MAX_AGE in database settings.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const matches: RuleMatch[] = []
+      const sourceFiles = files.filter((f) => /\.(ts|js|tsx|jsx|py)$/.test(f.path) && !/\.(test|spec)\./.test(f.path))
+
+      for (const file of sourceFiles) {
+        // JS: new Client() instead of new Pool() for pg
+        for (let i = 0; i < file.lines.length; i++) {
+          const line = file.lines[i]
+          if (/new\s+Client\(/.test(line) && /pg|postgres/.test(file.content) && !/Pool/.test(file.content)) {
+            matches.push({
+              ruleId: 'DB_006',
+              title: 'Using pg.Client instead of pg.Pool',
+              description: 'pg.Client creates a single connection — use Pool for connection pooling under load.',
+              severity: 'WARNING',
+              filePath: file.path,
+              lineNumber: i + 1,
+              evidence: line.trim().slice(0, 200),
+              suggestion: 'Replace new Client() with new Pool({ max: 20 }) from pg for connection pooling.',
+              category: 'DATABASE',
+            })
+            if (matches.length >= 3) return matches
+          }
+          // Python: psycopg2 connect() without pool
+          if (/psycopg2\.connect\(/.test(line) && !/pool|Pool/.test(file.content)) {
+            matches.push({
+              ruleId: 'DB_006',
+              title: 'No connection pooling (psycopg2)',
+              description: 'psycopg2.connect() creates a single connection — no pooling for concurrent requests.',
+              severity: 'WARNING',
+              filePath: file.path,
+              lineNumber: i + 1,
+              evidence: line.trim().slice(0, 200),
+              suggestion: 'Use psycopg2.pool.ThreadedConnectionPool or SQLAlchemy with pool_size for connection pooling.',
+              category: 'DATABASE',
+            })
+            if (matches.length >= 3) return matches
+          }
+        }
+      }
+      return matches
+    },
+  },
+
+  {
+    id: 'DB_007',
+    category: 'DATABASE',
+    title: 'Multiple DB writes without transaction',
+    description: 'Your code performs multiple database write operations (create/update/delete) in sequence without wrapping them in a transaction. If the second operation fails, the first is already committed — leaving your database in an inconsistent state.',
+    severity: 'WARNING',
+    suggestion: 'Wrap related writes in a transaction. Prisma: prisma.$transaction([...]). SQLAlchemy: with session.begin(). Django: with transaction.atomic(). Raw SQL: BEGIN; ...operations...; COMMIT;.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const matches: RuleMatch[] = []
+      const sourceFiles = files.filter(
+        (f) => /\.(ts|js|tsx|jsx|py)$/.test(f.path) && !/\.(test|spec)\./.test(f.path)
+      )
+
+      for (const file of sourceFiles) {
+        const isPy = /\.py$/.test(file.path)
+        for (let i = 0; i < file.lines.length; i++) {
+          const line = file.lines[i]
+          const isAsyncFn = isPy
+            ? /^\s*(async\s+)?def\s+/.test(line)
+            : /\basync\s+(function|\()/.test(line) || /=\s*async\s*\(/.test(line)
+
+          if (isAsyncFn) {
+            const fnBody = file.lines.slice(i + 1, Math.min(i + 30, file.lines.length)).join('\n')
+            const writeOps = isPy
+              ? (fnBody.match(/\.add\(|\.delete\(|\.update\(|\.create\(|\.save\(/g) || [])
+              : (fnBody.match(/prisma\.\w+\.(create|update|delete|upsert)\(|\.insertOne\(|\.updateOne\(|\.deleteOne\(/g) || [])
+            const hasTransaction = isPy
+              ? /session\.begin|transaction\.atomic|\.commit\(\)/.test(fnBody)
+              : /\$transaction|\btransaction\b|\.startSession/.test(fnBody)
+
+            if (writeOps.length >= 2 && !hasTransaction) {
+              matches.push({
+                ruleId: 'DB_007',
+                title: 'Multiple writes without transaction',
+                description: `${writeOps.length} DB write operations in one function without a transaction — data inconsistency risk.`,
+                severity: 'WARNING',
+                filePath: file.path,
+                lineNumber: i + 1,
+                evidence: line.trim().slice(0, 200),
+                suggestion: isPy
+                  ? 'Wrap in: with session.begin(): or transaction.atomic():'
+                  : 'Wrap in: await prisma.$transaction([...]) or prisma.$transaction(async (tx) => {...})',
+                category: 'DATABASE',
+              })
+              if (matches.length >= 3) return matches
+            }
+          }
+        }
+      }
+      return matches
+    },
+  },
+
+  {
+    id: 'DB_008',
+    category: 'DATABASE',
+    title: 'Dangerous mass delete without where clause',
+    description: 'Your code calls deleteMany or a mass delete operation without a where condition. This deletes ALL records in the table — a catastrophic data loss if triggered accidentally or via a bug.',
+    severity: 'CRITICAL',
+    suggestion: 'Always add a where clause to delete operations. Prisma: deleteMany({ where: { ... } }). SQLAlchemy: session.query(Model).filter(...).delete(). Django: Model.objects.filter(...).delete(). Never delete without conditions.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const matches: RuleMatch[] = []
+      const sourceFiles = files.filter((f) => /\.(ts|js|tsx|jsx|py)$/.test(f.path) && !/\.(test|spec)\./.test(f.path))
+
+      for (const file of sourceFiles) {
+        for (let i = 0; i < file.lines.length; i++) {
+          const line = file.lines[i]
+          // Prisma: deleteMany() or deleteMany({}) with no where
+          if (/\.deleteMany\(\s*(\{\s*\})?\s*\)/.test(line)) {
+            matches.push({
+              ruleId: 'DB_008',
+              title: 'deleteMany() without where clause',
+              description: 'deleteMany() with no where condition deletes ALL rows in the table.',
+              severity: 'CRITICAL',
+              filePath: file.path,
+              lineNumber: i + 1,
+              evidence: line.trim().slice(0, 200),
+              suggestion: 'Add a where clause: deleteMany({ where: { condition } }) to prevent mass data loss.',
+              category: 'DATABASE',
+            })
+            if (matches.length >= 3) return matches
+          }
+          // Python: Model.objects.all().delete() or session.query(Model).delete()
+          if (/\.objects\.all\(\)\.delete\(\)|\.query\(\w+\)\.delete\(\)/.test(line)) {
+            matches.push({
+              ruleId: 'DB_008',
+              title: 'Mass delete without filter',
+              description: 'delete() called on unfiltered queryset — deletes ALL rows in the table.',
+              severity: 'CRITICAL',
+              filePath: file.path,
+              lineNumber: i + 1,
+              evidence: line.trim().slice(0, 200),
+              suggestion: 'Add .filter(...) before .delete() to prevent accidental mass data deletion.',
+              category: 'DATABASE',
+            })
+            if (matches.length >= 3) return matches
+          }
+          // Raw SQL: DELETE FROM without WHERE
+          if (/DELETE\s+FROM\s+\w+\s*[;"'`$]/.test(line) && !/WHERE/i.test(line)) {
+            const context = file.lines.slice(i, Math.min(i + 3, file.lines.length)).join('\n')
+            if (!/WHERE/i.test(context)) {
+              matches.push({
+                ruleId: 'DB_008',
+                title: 'DELETE FROM without WHERE clause',
+                description: 'Raw SQL DELETE without WHERE — deletes all rows in the table.',
+                severity: 'CRITICAL',
+                filePath: file.path,
+                lineNumber: i + 1,
+                evidence: line.trim().slice(0, 200),
+                suggestion: 'Add a WHERE clause to limit which rows are deleted.',
+                category: 'DATABASE',
+              })
+              if (matches.length >= 3) return matches
+            }
+          }
+        }
+      }
+      return matches
+    },
+  },
+
+  {
+    id: 'DB_009',
+    category: 'DATABASE',
+    title: 'No soft delete pattern',
+    description: 'Your database models use hard deletes (permanently removing records). Once deleted, data is gone forever with no way to recover or audit. Soft deletes (marking records as deleted) allow recovery, audit trails, and prevent cascading data loss.',
+    severity: 'INFO',
+    suggestion: 'Add a deletedAt (DateTime?) or isDeleted (Boolean) field to models. Prisma: use middleware to filter soft-deleted records. Django: use django-safedelete. SQLAlchemy: add a query filter for active records.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const schemaFile = files.find((f) => /schema\.prisma$/.test(f.path))
+      if (!schemaFile) return []
+
+      const modelBlocks = schemaFile.content.split(/^model\s+/m).slice(1)
+      const hasSoftDelete = modelBlocks.some((b) => /deletedAt|deleted_at|isDeleted|is_deleted/.test(b))
+      if (hasSoftDelete) return []
+
+      const hasDeleteOps = files.some(
+        (f) => /\.(ts|js|tsx|jsx)$/.test(f.path) && /\.delete\(|\.deleteMany\(/.test(f.content)
+      )
+      if (!hasDeleteOps) return []
+
+      return [
+        {
+          ruleId: 'DB_009',
+          title: 'No soft delete pattern',
+          description: 'Models use hard deletes with no deletedAt/isDeleted field — deleted data is unrecoverable.',
+          severity: 'INFO',
+          filePath: schemaFile.path,
+          evidence: 'No deletedAt or isDeleted fields found in any model',
+          suggestion: 'Add deletedAt DateTime? to models and use Prisma middleware to filter soft-deleted records.',
+          category: 'DATABASE',
+        },
+      ]
+    },
+  },
+
+  {
+    id: 'DB_010',
+    category: 'DATABASE',
+    title: 'No database migration strategy',
+    description: 'Your project uses a database but has no migration files or migration tool configured. Without migrations, schema changes must be applied manually — which is error-prone and impossible to track or roll back.',
+    severity: 'WARNING',
+    suggestion: 'Use a migration tool. Prisma: npx prisma migrate dev. Django: python manage.py makemigrations. SQLAlchemy: use Alembic. Knex: npx knex migrate:make. Migrations make schema changes reproducible and reversible.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const hasMigrations = files.some(
+        (f) =>
+          /\/migrations\//.test(f.path) ||
+          /\/migrate\//.test(f.path) ||
+          /alembic\.ini$/.test(f.path) ||
+          /knexfile\.(js|ts)$/.test(f.path)
+      )
+      if (hasMigrations) return []
+
+      // Check if there is a database at all
+      const hasDb = files.some(
+        (f) =>
+          /schema\.prisma$/.test(f.path) ||
+          (/package\.json$/.test(f.path) && /pg|mysql2|mongoose|sqlite3|sequelize|typeorm|drizzle/.test(f.content)) ||
+          (/requirements.*\.txt$/.test(f.path) && /psycopg2|pymongo|sqlalchemy|django/.test(f.content))
+      )
+      if (!hasDb) return []
+
+      // Prisma with schema but no migrations directory
+      const hasPrismaSchema = files.some((f) => /schema\.prisma$/.test(f.path))
+      if (hasPrismaSchema) {
+        return [
+          {
+            ruleId: 'DB_010',
+            title: 'No Prisma migration files',
+            description: 'Prisma schema exists but no migration files found — schema changes are not tracked.',
+            severity: 'WARNING',
+            filePath: 'prisma/migrations',
+            evidence: 'schema.prisma present but no prisma/migrations directory',
+            suggestion: 'Run: npx prisma migrate dev --name init to create your first migration.',
+            category: 'DATABASE',
+          },
+        ]
+      }
+
+      return [
+        {
+          ruleId: 'DB_010',
+          title: 'No database migration strategy',
+          description: 'Database is used but no migration files or tool found — schema changes are untracked.',
+          severity: 'WARNING',
+          filePath: 'package.json',
+          evidence: 'Database dependency present but no migrations directory',
+          suggestion: 'Add a migration tool (Prisma migrate, Alembic, Knex migrations) to track schema changes.',
+          category: 'DATABASE',
+        },
+      ]
+    },
+  },
+
+  {
+    id: 'DB_011',
+    category: 'DATABASE',
+    title: 'Sensitive data stored as plain text',
+    description: 'Your database schema stores fields like email, phone, SSN, or credit card numbers as plain String/Text types without any indication of encryption. If your database is breached, all sensitive data is immediately readable.',
+    severity: 'WARNING',
+    suggestion: 'Encrypt sensitive fields at the application level before storing. Node.js: use crypto.createCipheriv(). Python: use cryptography.fernet. For Prisma, use middleware to auto-encrypt/decrypt fields. Consider using a field-level encryption library.',
+    detect(files: FetchedFile[]): RuleMatch[] {
+      const schemaFile = files.find((f) => /schema\.prisma$/.test(f.path))
+      if (!schemaFile) return []
+
+      const sensitiveFields = /\b(ssn|socialSecurity|social_security|creditCard|credit_card|cardNumber|card_number|taxId|tax_id|bankAccount|bank_account)\s+String/i
+      const matches: RuleMatch[] = []
+
+      for (let i = 0; i < (schemaFile.lines?.length ?? 0); i++) {
+        const line = schemaFile.lines[i]
+        if (sensitiveFields.test(line)) {
+          matches.push({
+            ruleId: 'DB_011',
+            title: 'Sensitive field stored as plain text',
+            description: 'Highly sensitive field stored as plain String — should be encrypted at rest.',
+            severity: 'WARNING',
+            filePath: schemaFile.path,
+            lineNumber: i + 1,
+            evidence: line.trim().slice(0, 200),
+            suggestion: 'Encrypt this field before storing using application-level encryption (e.g. AES-256).',
+            category: 'DATABASE',
+          })
+          if (matches.length >= 3) return matches
+        }
+      }
+      return matches
+    },
+  },
 ]
