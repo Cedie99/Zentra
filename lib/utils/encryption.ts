@@ -1,7 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
-const KEY = Buffer.from(process.env.ENCRYPTION_KEY || '0'.repeat(64), 'hex')
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"')
+}
+const KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex')
 
 export function encrypt(plaintext: string): string {
   const iv = randomBytes(12)

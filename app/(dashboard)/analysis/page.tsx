@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/dashboard/sidebar'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db/client'
+import { getMembership } from '@/lib/team/get-membership'
 import { BarChart3, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -21,8 +22,10 @@ export default async function AnalysisPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
+  const { workspaceUserId } = await getMembership(session.user.id)
+
   const reports = await prisma.analysisReport.findMany({
-    where: { userId: session.user.id },
+    where: { userId: workspaceUserId },
     orderBy: { createdAt: 'desc' },
     take: 50,
     include: {

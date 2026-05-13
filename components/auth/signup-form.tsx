@@ -20,8 +20,8 @@ export function SignupForm() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       return
     }
 
@@ -51,7 +51,7 @@ export function SignupForm() {
       })
 
       if (result?.error) {
-        setError('Account created but sign in failed. Please try signing in.')
+        setError('Something went wrong. If you already have an account, try signing in instead.')
       } else {
         window.location.href = '/dashboard'
       }

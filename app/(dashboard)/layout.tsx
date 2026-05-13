@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,10 +20,13 @@ export const metadata: Metadata = {
   description: "Manage and analyze your GitHub repositories",
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
   return <>{children}</>;
 }
