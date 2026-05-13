@@ -29,6 +29,7 @@ model User {
   ownedInvites TeamInvite[]     @relation("OwnedInvites")
   ownedMembers TeamMember[]     @relation("OwnedMembers")
   memberOf     TeamMember[]     @relation("MemberOf")
+  feedback     Feedback[]
 }
 
 model Account {
@@ -197,4 +198,22 @@ model TeamMember {
   @@unique([ownerId, memberId])
   @@index([ownerId])
   @@index([memberId])
+}
+
+enum FeedbackCategory {
+  BUG
+  FEATURE
+  IMPROVEMENT
+  OTHER
+}
+
+model Feedback {
+  id        String           @id @default(cuid())
+  userId    String
+  category  FeedbackCategory
+  message   String
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

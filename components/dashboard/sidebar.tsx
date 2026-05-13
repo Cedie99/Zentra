@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Settings, Users } from 'lucide-react'
 import { SignOutButton } from '@/components/auth/sign-out-button'
+import { FeedbackModal } from '@/components/dashboard/feedback-modal'
 import { useSession } from 'next-auth/react'
 
 const navItems = [
@@ -73,6 +74,7 @@ export function Sidebar() {
               </Link>
             )
           })}
+          <FeedbackModal />
           {isPro && (
             <Link
               href="/settings/team"
