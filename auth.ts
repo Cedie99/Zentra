@@ -14,7 +14,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'read:user user:email repo',
+          scope: 'read:user user:email',
         },
       },
     }),
@@ -49,7 +49,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
+      // Allow GitHub OAuth to link to an existing credentials account with the same email
+      if (account?.provider === 'github' && profile?.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: profile.email as string },
+          include: { accounts: true },
+        })
+
+        if (existingUser) {
+          const alreadyLinked = existingUser.accounts.some(
+            (a) => a.provider === 'github'
+          )
+          if (!alreadyLinked) {
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                token_type: account.token_type,
+                scope: account.scope,
+              },
+            })
+          }
+
+          // Store encrypted GitHub token
+          if (account.access_token) {
+            const encryptedToken = encrypt(account.access_token)
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { githubToken: encryptedToken },
+            })
+          }
+          return true
+        }
+      }
+
       // Store the encrypted GitHub token on the user record after OAuth
       if (account?.provider === 'github' && account.access_token && user.id) {
         const encryptedToken = encrypt(account.access_token)

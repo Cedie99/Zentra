@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Home, Settings, Users } from 'lucide-react'
 import { SignOutButton } from '@/components/auth/sign-out-button'
 import { FeedbackModal } from '@/components/dashboard/feedback-modal'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { useSession } from 'next-auth/react'
 
 const navItems = [
@@ -106,8 +107,11 @@ export function Sidebar() {
             <p className="text-xs text-muted-foreground truncate">{user?.email ?? ''}</p>
           </div>
         </div>
-        <div className="px-4 mt-2">
-          <SignOutButton />
+        <div className="px-4 mt-2 flex items-center gap-2">
+          <div className="flex-1">
+            <SignOutButton />
+          </div>
+          <ThemeToggle />
         </div>
       </div>
     </aside>

@@ -26,7 +26,7 @@ export async function listUserRepos(octokit: Octokit): Promise<GitHubRepo[]> {
   const { data } = await octokit.rest.repos.listForAuthenticatedUser({
     sort: 'updated',
     per_page: 100,
-    type: 'all',
+    type: 'public',
   })
   return data as GitHubRepo[]
 }

@@ -58,6 +58,9 @@ export async function POST(req: NextRequest) {
   let repoRecord
   try {
     const { data: ghRepo } = await octokit.rest.repos.get({ owner, repo })
+    if (ghRepo.private) {
+      return NextResponse.json({ error: 'Private repositories are not supported. Only public repositories can be analyzed.' }, { status: 403 })
+    }
     repoRecord = await prisma.repository.upsert({
       where: { githubId: ghRepo.id },
       update: { fullName: ghRepo.full_name, name: ghRepo.name, description: ghRepo.description, language: ghRepo.language, isPrivate: ghRepo.private, url: ghRepo.html_url, userId: workspaceUserId },

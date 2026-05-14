@@ -98,7 +98,7 @@ model AnalysisReport {
   createdAt     DateTime        @default(now())
   completedAt   DateTime?
   user          User?           @relation(fields: [userId], references: [id])
-  repository    Repository      @relation(fields: [repositoryId], references: [id])
+  repository    Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   sections      ReportSection[]
 
   @@index([userId])

@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useState, useEffect, use } from 'react'
 import { RerunAnalysisButton } from '@/components/report/rerun-analysis-button'
 import { ExportButtons } from '@/components/report/export-buttons'
+import { GeneralAiPrompt } from '@/components/report/general-ai-prompt'
 
 export interface Issue {
   id: string
@@ -200,6 +201,9 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             filesAnalyzed={report.filesAnalyzed}
             techStack={report.techStack}
           />
+
+          {/* General AI prompt — full codebase context */}
+          {totalIssues > 0 && <GeneralAiPrompt report={report} />}
 
           {/* Detailed findings — collapsible */}
           <div className="border border-border rounded-2xl overflow-hidden">

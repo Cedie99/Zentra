@@ -186,7 +186,7 @@ export default async function DashboardPage({
                   return (
                     <div key={repo.id} className="group relative bg-card border border-border hover:border-amber-500/30 rounded-2xl p-5 transition-colors duration-200">
                       {/* Delete button — owners and editors only */}
-                      {!isViewer && <DeleteRepoButton repoId={repo.id} />}
+                      {!isViewer && <DeleteRepoButton repoId={repo.id} repoName={repo.fullName} />}
 
                       <Link href={`/reports/${repo.id}`} className="block">
                         <div className="flex items-start gap-4">

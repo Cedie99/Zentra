@@ -1,6 +1,6 @@
 'use client'
 
-import { X, AlertTriangle, XCircle, Info, MapPin, Lightbulb, Code, FileSearch, Sparkles, Copy, Check } from 'lucide-react'
+import { X, AlertTriangle, XCircle, Info, MapPin, Lightbulb, Code, FileSearch, Sparkles, Copy, Check, Wand2, ChevronUp } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import type { Issue } from '@/app/(dashboard)/reports/[id]/page'
 
@@ -73,6 +73,7 @@ export function IssueDetailPanel({ issue, onClose }: IssueDetailPanelProps) {
   const cfg = SEVERITY_CONFIG[issue.severity] ?? SEVERITY_CONFIG.INFO
   const Icon = cfg.icon
   const [copied, setCopied] = useState(false)
+  const [promptOpen, setPromptOpen] = useState(false)
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -188,38 +189,63 @@ export function IssueDetailPanel({ issue, onClose }: IssueDetailPanelProps) {
             )}
             {/* AI Prompt */}
             <section className="bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between">
                 <h3 className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 uppercase tracking-wider">
                   <Sparkles className="w-3.5 h-3.5" strokeWidth={1.5} />
                   Fix with AI
                 </h3>
-                <button
-                  onClick={handleCopy}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                    copied
-                      ? 'bg-green-500/15 border-green-500/30 text-green-400'
-                      : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" strokeWidth={2} />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      Copy prompt
-                    </>
-                  )}
-                </button>
+                {!promptOpen && (
+                  <button
+                    onClick={() => setPromptOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all duration-200"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Hand off to AI
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Paste this into ChatGPT, Claude, Gemini, or any AI to get a targeted fix for this issue.
-              </p>
-              <pre className="text-xs text-foreground/70 bg-background/60 border border-border rounded-lg px-3 py-3 font-mono overflow-x-auto leading-relaxed whitespace-pre-wrap break-words max-h-36 overflow-y-auto" data-lenis-prevent>
-                {buildPrompt(issue)}
-              </pre>
+
+              {promptOpen && (
+                <div className="mt-3 space-y-2">
+                  <pre className="text-xs text-foreground/70 bg-background/60 border border-border rounded-lg px-3 py-3 font-mono overflow-x-auto leading-relaxed whitespace-pre-wrap break-words max-h-36 overflow-y-auto" data-lenis-prevent>
+                    {buildPrompt(issue)}
+                  </pre>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Paste into ChatGPT, Claude, Gemini, or any AI.
+                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => setPromptOpen(false)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Hide
+                      </button>
+                      <button
+                        onClick={handleCopy}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                          copied
+                            ? 'bg-green-500/15 border-green-500/30 text-green-400'
+                            : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" strokeWidth={2} />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
           </div>

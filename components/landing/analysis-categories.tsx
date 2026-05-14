@@ -1,11 +1,6 @@
-import { Layers, Shield, Database, Zap, AlertTriangle, Server, Cpu, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
-import { auth } from '@/auth'
+import { Layers, Shield, Database, Zap, AlertTriangle, Server, Cpu } from 'lucide-react'
 
 export async function AnalysisCategories() {
-  const session = await auth()
-  const user = session?.user
-  const redirectPath = user ? '/dashboard' : '/signup'
   const categories = [
     {
       icon: Layers,
@@ -109,42 +104,36 @@ export async function AnalysisCategories() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category, index) => (
-            <Link
+            <div
               key={index}
-              href={redirectPath}
-              className={`group bg-card border border-border rounded-2xl p-6 ${bgColorMap[category.color as keyof typeof bgColorMap]} hover:bg-card hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 cursor-pointer block`}
-              style={{ animationDelay: `${index * 100}ms` }}
+              className={`bg-card border border-border rounded-2xl p-6 ${bgColorMap[category.color as keyof typeof bgColorMap]} transition-colors duration-200`}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`w-14 h-14 ${colorMap[category.color as keyof typeof colorMap]} border rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110`}>
+                <div className={`w-14 h-14 ${colorMap[category.color as keyof typeof colorMap]} border rounded-2xl flex items-center justify-center`}>
                   <category.icon className="w-7 h-7" strokeWidth={1.5} />
                 </div>
-                <div className="text-3xl font-bold text-foreground/30 group-hover:text-amber-500/50 transition-colors">
+                <div className="text-3xl font-bold text-foreground/20">
                   {category.count}
                 </div>
               </div>
-              
-              <h3 className="text-xl font-semibold text-foreground mb-2 tracking-tight group-hover:text-amber-500 transition-colors">
+
+              <h3 className="text-xl font-semibold text-foreground mb-2 tracking-tight">
                 {category.title}
               </h3>
-              
+
               <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 {category.description}
               </p>
-              
+
               <div className="space-y-2">
                 {category.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 group-hover:bg-amber-500 transition-colors" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500/40 flex-shrink-0" />
                     {item}
                   </div>
                 ))}
               </div>
-
-              <div className="mt-6 pt-4 border-t border-border flex items-center gap-2 text-amber-500 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                View details <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { auth } from '@/auth'
 import { UserNavDropdown } from '@/components/landing/user-nav-dropdown'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export async function Navbar() {
   const session = await auth()
@@ -28,12 +29,16 @@ export async function Navbar() {
             <Link href="/#use-cases" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Use Cases
             </Link>
+            <Link href="/#trust" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
+              Privacy &amp; Security
+            </Link>
             <Link href="/#pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium">
               Pricing
             </Link>
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {user ? (
               <UserNavDropdown name={user.name} email={user.email} image={user.image} />
             ) : (
