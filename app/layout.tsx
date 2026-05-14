@@ -19,6 +19,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Zentra",
   description: "Instant production-readiness analysis for your GitHub repositories",
+  icons: {
+    icon: "/zentra-logo.svg",
+  },
 };
 
 export default function RootLayout({
