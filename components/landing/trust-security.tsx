@@ -1,4 +1,4 @@
-import { ShieldCheck, Eye, EyeOff, Lock, ExternalLink, Server, Code2 } from 'lucide-react'
+import { ShieldCheck, Eye, EyeOff, Lock, Server, Code2 } from 'lucide-react'
 
 const points = [
   {
@@ -98,17 +98,6 @@ export function TrustSecurity() {
           ))}
         </div>
 
-        <div className="text-center">
-          <a
-            href="https://github.com/Cedie99/Zentra"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary border border-border rounded-full text-sm text-muted-foreground hover:text-foreground hover:border-green-500/30 transition-colors duration-200"
-          >
-            <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
-            View the source code on GitHub
-          </a>
-        </div>
       </div>
     </section>
   )
