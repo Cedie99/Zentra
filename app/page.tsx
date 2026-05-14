@@ -37,7 +37,7 @@ export default function RootPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-8">
-            Point it at any <span className="text-foreground font-medium">public GitHub repository</span> and get an AI-generated verdict — analyzing your <span className="text-foreground font-medium">architecture and system design</span>, health score, security findings, deployment risks, and prioritised fixes.
+            Point it at any <span className="text-foreground font-medium">public GitHub repository</span> and get an AI-generated verdict — analyzing your <span className="text-foreground font-medium">architecture and system design</span>, health score, security findings, deployment risks, and prioritized fixes.
           </p>
 
           {/* Trust strip — addresses the Reddit concern directly, above the CTA */}
