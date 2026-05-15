@@ -61,7 +61,7 @@ export default function RootPage() {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-3 justify-center mb-8">
             <Link
-              href="/dashboard"
+              href="/try"
               className="group px-7 py-3 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 flex items-center gap-2 text-sm"
             >
               Analyze a Repository
